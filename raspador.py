@@ -77,3 +77,60 @@ def get_epbr():
                 url = f"https://api.telegram.org/bot{token}/sendMessage"
                 params = {"chat_id": chat_id, "text": 'Título: '+ title_text + '\n\n' + 'Link: ' + link + '\n\n' + 'Resumo:' + resumo_text}
                 response = requests.post(url, params=params)
+
+
+def get_infomoney():
+    #captura página "Ultimas Noticias Infomoney"
+    result = requests.get("https://www.infomoney.com.br/ultimas-noticias/")
+
+    #variável result vai receber o codigo da execução da página chamada pela request
+    soup = BeautifulSoup(result.text)
+
+    titles = soup.find_all("span", class_="hl-title hl-title-2")
+
+    # Itera sobre as tags encontradas para extrair os títulos e os links
+    for title in titles:
+        # Extrai o texto do título
+        title_text = title.a.text.strip()
+        # Extrai o link
+        link = title.a["href"]
+
+        # Faz uma solicitação HTTP para obter o conteúdo da página do link
+        link_response = requests.get(link)
+        link_html = link_response.text
+
+        # Cria um objeto BeautifulSoup para a página do link
+        link_soup = BeautifulSoup(link_html, "html.parser")
+
+        # Extrai o conteúdo dos parágrafos principais
+        article = link_soup.find("article", class_= "im-article clear-fix")
+        if article:
+            main_paragraphs = article.find_all("p")
+            main_text = "\n".join(paragraph.get_text().strip() for paragraph in main_paragraphs)
+
+        coluna_links = sheet.col_values(2) #testa para ver se o link já está na coluna e já foi lido, para evitar repetições.
+        if link in coluna_links:
+            print("Link já raspado")
+
+        else:
+            if "Enauta" in main_text:
+                prompt = "Resuma a matéria abaixo, referente a uma empresa de petróleo de capital aberto, em um texto de até 300 caracteres. Esse resumo será utilizado pela alta gerência para analisar rapidamente o conteúdo da matéria."
+
+                response = openai.ChatCompletion.create(
+                    model="gpt-4-1106-preview",
+                    messages=[
+                        {"role": "user", "content": f"{prompt}: {main_text}"}
+                    ]
+                )
+                
+                resumo_text = response['choices'][0]['message']['content']
+
+                token = os.environ.get("TOKEN_TELEGRAM")
+                chat_id = "-1002115892927"
+
+                url = f"https://api.telegram.org/bot{token}/sendMessage"
+                params = {"chat_id": chat_id, "text": 'Título: '+ title_text + '\n\n' + 'Link: ' + link + '\n\n' + 'Resumo: '+ resumo_text}
+                response = requests.post(url, params=params)
+
+                linha_armazenar = [title_text, link, resumo_text] #armazenar título, link e resumo na planilha
+                sheet.insert_row(linha_armazenar, 2)
