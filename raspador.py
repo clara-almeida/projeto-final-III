@@ -116,14 +116,12 @@ def get_infomoney():
             if "Enauta" in main_text:
                 prompt = "Resuma a matéria abaixo, referente a uma empresa de petróleo de capital aberto, em um texto de até 300 caracteres. Esse resumo será utilizado pela alta gerência para analisar rapidamente o conteúdo da matéria."
 
-                response = openai.ChatCompletion.create(
+                response = client.chat.completions.create(
                     model="gpt-4-1106-preview",
-                    messages=[
-                        {"role": "user", "content": f"{prompt}: {main_text}"}
-                    ]
-                )
+                    messages=[{"role": "user", "content": f"{prompt}: {main_text}"}
+                ]) 
                 
-                resumo_text = response['choices'][0]['message']['content']
+                resumo_text = response.choices[0].message.content
 
                 token = os.environ.get("TOKEN_TELEGRAM")
                 chat_id = "-1002115892927"
